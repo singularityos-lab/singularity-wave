@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="dev.sinty.wave" path="/dev/sinty/wave/">
+    <key name="sample-rate" type="s">
+      <choices>
+        <choice value="44100"/>
+        <choice value="48000"/>
+        <choice value="96000"/>
+      </choices>
+      <default>'48000'</default>
+      <summary>Sample rate for new sessions and recordings</summary>
+    </key>
+    <key name="bit-depth" type="s">
+      <choices>
+        <choice value="16"/>
+        <choice value="24"/>
+        <choice value="32f"/>
+      </choices>
+      <default>'24'</default>
+      <summary>Bit depth used when exporting WAV, AIFF and FLAC</summary>
+    </key>
+    <key name="dither" type="b">
+      <default>true</default>
+      <summary>Add noise shaped dither when reducing the bit depth</summary>
+    </key>
+    <key name="loudness-target" type="s">
+      <choices>
+        <choice value="podcast"/>
+        <choice value="streaming"/>
+        <choice value="broadcast"/>
+        <choice value="audiobook"/>
+      </choices>
+      <default>'podcast'</default>
+      <summary>Default loudness target for normalisation</summary>
+    </key>
+    <key name="true-peak-ceiling" type="i">
+      <range min="-6" max="0"/>
+      <default>-1</default>
+      <summary>Highest true peak allowed after normalisation, in dBTP</summary>
+    </key>
+    <key name="spectral-window" type="s">
+      <choices>
+        <choice value="1024"/>
+        <choice value="2048"/>
+        <choice value="4096"/>
+        <choice value="8192"/>
+      </choices>
+      <default>'2048'</default>
+      <summary>FFT size of the spectral view</summary>
+    </key>
+    <key name="spectral-scale" type="s">
+      <choices>
+        <choice value="log"/>
+        <choice value="linear"/>
+        <choice value="mel"/>
+      </choices>
+      <default>'log'</default>
+      <summary>Frequency scale of the spectral view</summary>
+    </key>
+    <key name="snap-zero-crossings" type="b">
+      <default>true</default>
+      <summary>Move selection edges to the nearest zero crossing</summary>
+    </key>
+    <key name="monitor-latency" type="s">
+      <choices>
+        <choice value="64"/>
+        <choice value="128"/>
+        <choice value="256"/>
+        <choice value="512"/>
+        <choice value="1024"/>
+      </choices>
+      <default>'128'</default>
+      <summary>Buffer size in samples used for input monitoring</summary>
+    </key>
+    <key name="preroll" type="i">
+      <range min="0" max="10"/>
+      <default>2</default>
+      <summary>Seconds played before a punch in recording starts</summary>
+    </key>
+    <key name="isolate-plugins" type="b">
+      <default>true</default>
+      <summary>Run third party plugins in a separate process</summary>
+    </key>
+    <key name="transcription-language" type="s">
+      <default>''</default>
+      <summary>Language code for transcription, empty to detect it</summary>
+    </key>
+  </schema>
+</schemalist>

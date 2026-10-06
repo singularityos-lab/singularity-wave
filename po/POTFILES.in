@@ -1,0 +1,35 @@
+  src/ui/app.vala
+  src/ui/dialogs.vala
+  src/ui/inspector_panel.vala
+  src/ui/mixer_view.vala
+  src/ui/panels.vala
+  src/ui/print_cloud.vala
+  src/ui/process_dialogs.vala
+  src/ui/rack_panel.vala
+  src/ui/session_panels.vala
+  src/ui/test_script.vala
+  src/ui/timeline_view.vala
+  src/ui/transport.vala
+  src/ui/waveform_view.vala
+  src/ui/widgets.vala
+  src/ui/window.vala
+src/engine/builtin_effects.vala
+src/engine/decoder.vala
+src/engine/document.vala
+src/engine/effect.vala
+src/engine/export.vala
+src/engine/interchange.vala
+src/engine/loudness.vala
+src/engine/metadata.vala
+src/engine/mixer.vala
+src/engine/player.vala
+src/engine/processes.vala
+src/engine/rack.vala
+src/engine/recorder.vala
+src/engine/riff.vala
+src/engine/session.vala
+src/engine/session_file.vala
+src/engine/source.vala
+src/engine/transcript.vala
+src/engine/workflows.vala
+src/engine/zip.vala

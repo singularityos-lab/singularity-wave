@@ -1,0 +1,24 @@
+[Desktop Entry]
+Name=Wave
+GenericName=Audio Editor
+Comment=Record, edit, restore and mix audio
+Exec=singularity-wave %U
+Icon=dev.sinty.wave
+Terminal=false
+Type=Application
+Categories=AudioVideo;Audio;AudioVideoEditing;Recorder;
+MimeType=application/x-wave-session;audio/x-wav;audio/wav;audio/flac;audio/x-flac;audio/mpeg;audio/ogg;audio/x-vorbis+ogg;audio/x-opus+ogg;audio/aac;audio/mp4;audio/x-m4a;audio/x-aiff;audio/x-caf;application/x-cue;
+Keywords=audio;sound;wave;waveform;podcast;record;mix;multitrack;noise;restore;loudness;spectral;
+StartupWMClass=dev.sinty.wave
+X-Singularity-Dock-Recent=true
+Actions=new-session;new-podcast;
+
+[Desktop Action new-session]
+Name=New Multitrack Session
+Icon=document-new-symbolic
+Exec=singularity-wave --new session
+
+[Desktop Action new-podcast]
+Name=New Podcast
+Icon=document-new-symbolic
+Exec=singularity-wave --new podcast

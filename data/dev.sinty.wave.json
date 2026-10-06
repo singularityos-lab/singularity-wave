@@ -1,0 +1,192 @@
+{
+    "schema-id": "dev.sinty.wave",
+    "settings": [
+        {
+            "key": "sample-rate",
+            "label": "Sample Rate",
+            "subtitle": "For new sessions and recordings",
+            "type": "string",
+            "widget": "combo",
+            "options": [
+                {
+                    "id": "44100",
+                    "label": "44.1 kHz"
+                },
+                {
+                    "id": "48000",
+                    "label": "48 kHz"
+                },
+                {
+                    "id": "96000",
+                    "label": "96 kHz"
+                }
+            ]
+        },
+        {
+            "key": "bit-depth",
+            "label": "Export Bit Depth",
+            "subtitle": "For WAV, AIFF and FLAC",
+            "type": "string",
+            "widget": "combo",
+            "options": [
+                {
+                    "id": "16",
+                    "label": "16 bit"
+                },
+                {
+                    "id": "24",
+                    "label": "24 bit"
+                },
+                {
+                    "id": "32f",
+                    "label": "32 bit float"
+                }
+            ]
+        },
+        {
+            "key": "dither",
+            "label": "Dither",
+            "subtitle": "Add noise shaped dither when reducing the bit depth",
+            "type": "boolean",
+            "widget": "toggle"
+        },
+        {
+            "key": "loudness-target",
+            "label": "Loudness Target",
+            "subtitle": "Used by Match Loudness and new podcast sessions",
+            "type": "string",
+            "widget": "combo",
+            "options": [
+                {
+                    "id": "podcast",
+                    "label": "Podcast, -16 LUFS"
+                },
+                {
+                    "id": "streaming",
+                    "label": "Music Streaming, -14 LUFS"
+                },
+                {
+                    "id": "broadcast",
+                    "label": "Broadcast EBU R128, -23 LUFS"
+                },
+                {
+                    "id": "audiobook",
+                    "label": "Audiobook, -20 LUFS"
+                }
+            ]
+        },
+        {
+            "key": "true-peak-ceiling",
+            "label": "True Peak Ceiling",
+            "subtitle": "In dBTP, after normalisation",
+            "type": "int",
+            "widget": "spin",
+            "min": -6,
+            "max": 0
+        },
+        {
+            "key": "spectral-window",
+            "label": "Spectral Resolution",
+            "subtitle": "Larger windows show finer frequencies",
+            "type": "string",
+            "widget": "combo",
+            "options": [
+                {
+                    "id": "1024",
+                    "label": "1024"
+                },
+                {
+                    "id": "2048",
+                    "label": "2048"
+                },
+                {
+                    "id": "4096",
+                    "label": "4096"
+                },
+                {
+                    "id": "8192",
+                    "label": "8192"
+                }
+            ]
+        },
+        {
+            "key": "spectral-scale",
+            "label": "Frequency Scale",
+            "type": "string",
+            "widget": "combo",
+            "options": [
+                {
+                    "id": "log",
+                    "label": "Logarithmic"
+                },
+                {
+                    "id": "linear",
+                    "label": "Linear"
+                },
+                {
+                    "id": "mel",
+                    "label": "Mel"
+                }
+            ]
+        },
+        {
+            "key": "snap-zero-crossings",
+            "label": "Snap to Zero Crossings",
+            "subtitle": "Avoids clicks at the edges of edits",
+            "type": "boolean",
+            "widget": "toggle"
+        },
+        {
+            "key": "monitor-latency",
+            "label": "Monitoring Buffer",
+            "subtitle": "Smaller buffers lower the delay when listening to the input",
+            "type": "string",
+            "widget": "combo",
+            "options": [
+                {
+                    "id": "64",
+                    "label": "64 samples"
+                },
+                {
+                    "id": "128",
+                    "label": "128 samples"
+                },
+                {
+                    "id": "256",
+                    "label": "256 samples"
+                },
+                {
+                    "id": "512",
+                    "label": "512 samples"
+                },
+                {
+                    "id": "1024",
+                    "label": "1024 samples"
+                }
+            ]
+        },
+        {
+            "key": "preroll",
+            "label": "Punch In Preroll",
+            "subtitle": "Seconds played before recording starts",
+            "type": "int",
+            "widget": "spin",
+            "min": 0,
+            "max": 10
+        },
+        {
+            "key": "isolate-plugins",
+            "label": "Run Plugins Separately",
+            "subtitle": "A crashing plugin cannot close Wave",
+            "type": "boolean",
+            "widget": "toggle"
+        },
+        {
+            "key": "transcription-language",
+            "label": "Transcription Language",
+            "subtitle": "A language code such as en or it, empty to detect it",
+            "type": "string",
+            "widget": "entry"
+        }
+    ]
+}

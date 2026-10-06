@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/dev/sinty/wave/icons/scalable/actions">
+    <file preprocess="xml-stripblanks" alias="wave-select-time-symbolic.svg">symbolic/wave-select-time-symbolic.svg</file>
+    <file preprocess="xml-stripblanks" alias="wave-select-rect-symbolic.svg">symbolic/wave-select-rect-symbolic.svg</file>
+    <file preprocess="xml-stripblanks" alias="wave-select-lasso-symbolic.svg">symbolic/wave-select-lasso-symbolic.svg</file>
+    <file preprocess="xml-stripblanks" alias="wave-select-brush-symbolic.svg">symbolic/wave-select-brush-symbolic.svg</file>
+    <file preprocess="xml-stripblanks" alias="wave-effects-symbolic.svg">symbolic/wave-effects-symbolic.svg</file>
+    <file preprocess="xml-stripblanks" alias="wave-loudness-symbolic.svg">symbolic/wave-loudness-symbolic.svg</file>
+    <file preprocess="xml-stripblanks" alias="wave-spectrum-symbolic.svg">symbolic/wave-spectrum-symbolic.svg</file>
+    <file preprocess="xml-stripblanks" alias="wave-transcript-symbolic.svg">symbolic/wave-transcript-symbolic.svg</file>
+  </gresource>
+</gresources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-wave-session">
+    <comment>Wave session</comment>
+    <sub-class-of type="application/zip"/>
+    <glob pattern="*.wave"/>
+  </mime-type>
+  <mime-type type="audio/x-caf">
+    <comment>Core Audio file</comment>
+    <glob pattern="*.caf"/>
+  </mime-type>
+</mime-info>

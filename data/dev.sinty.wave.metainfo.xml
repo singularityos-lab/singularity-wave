@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>dev.sinty.wave</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <name>Wave</name>
+  <summary>Record, edit, restore and mix audio</summary>
+  <description>
+    <p>Wave is the audio studio of the desktop: a waveform and spectral editor, multitrack sessions with a mixer, restoration and loudness tools. It is made for podcasts, voice work, audio for video and restoring old recordings, and it works entirely offline.</p>
+    <ul>
+      <li>Sample accurate waveform editing with markers, fades, zero crossing snapping and unlimited undo</li>
+      <li>Spectral view with rectangle, lasso and brush selections, attenuation and healing</li>
+      <li>Multitrack sessions with crossfades, buses, sends, automation and a video reference track</li>
+      <li>Equalizers, dynamics, reverb, delay, modulation, pitch and time tools, plus LV2, CLAP and LADSPA plugins in a separate process</li>
+      <li>Noise reduction, click, hum, clipping and reverb repair</li>
+      <li>EBU R128 loudness metering, normalisation and batch processing</li>
+      <li>Podcast templates with automatic ducking and local transcription</li>
+      <li>WAV and BWF, FLAC, MP3, Ogg Vorbis, Opus, AIFF and M4A with metadata and chapters</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">dev.sinty.wave.desktop</launchable>
+  <url type="bugtracker">https://github.com/singularityos-lab/singularity-desktop/issues</url>
+  <content_rating type="oars-1.1"/>
+</component>
