@@ -66,7 +66,9 @@ void test_document() throws Error {
     var d2 = make_doc(48000, 1, 1.0, 100);
     Processes.reverse(d2, 0, d2.length);
     check(Math.fabsf(d2.read(0, 1)[0] - (float) (0.5 * Math.sin(2 * Math.PI * 100 * 47999 / 48000.0))) < 1e-6, "reverse");
+    float before_invert = d2.read(100, 1)[0];
     Processes.invert(d2, 0, d2.length);
+    check(Math.fabsf(d2.read(100, 1)[0] + before_invert) < 1e-6 && Math.fabsf(before_invert) > 0.01, "invert flips the polarity");
     Processes.normalize_peak(d2, 0, d2.length, -1, false);
     var all = d2.read(0, d2.length);
     check(Math.fabs(20 * Math.log10(WaveDsp.peak(all, all.length)) + 1) < 0.01, "normalize to -1 dBFS");
@@ -635,6 +637,50 @@ void test_metronome() throws Error {
     check(WaveDsp.rms(mix, mix.length) < 1e-6, "metronome left out of renders and exports");
 }
 
+void test_montage() throws Error {
+    string music = File.new_for_path(tmp("music.wav")).get_uri();
+    string project = tmp("film Sound.montage");
+    FileUtils.set_contents(project, """{"version": 2, "tracks": [
+{"id": "video-1", "name": "Video", "kind": "video", "muted": false},
+{"id": "audio-1", "name": "Dialogue", "kind": "audio", "muted": false}],
+"clips": [
+{"id": "c1", "uri": "%s", "track": "video-1", "position": 0, "start": 0, "end": 1000000000},
+{"id": "c2", "uri": "%s", "track": "audio-1", "position": 1000000000, "start": 500000000, "end": 2500000000}]}""".printf(music, music));
+    var s = Interchange.import_montage(project, 48000);
+    Track? video = null;
+    Track? dialogue = null;
+    foreach (var t in s.tracks) {
+        if (t.kind == TrackKind.VIDEO) video = t;
+        if (t.name == "Dialogue") dialogue = t;
+    }
+    check(video != null && s.tracks[0] == video && video.video_segments.size == 1, "Montage video track becomes the video reference");
+    check(dialogue != null && dialogue.clips.size == 1 && dialogue.clips[0].position == 48000 && dialogue.clips[0].source_offset == 24000 && dialogue.clips[0].length == 96000,
+        "Montage audio clip keeps position, in point and length");
+    string mix = tmp("film mix.wav");
+    var o = new ExportOptions();
+    o.format = ExportFormat.WAV;
+    s.mixer.prepare_clips();
+    Exporter.export_sync(s, mix, o);
+    Interchange.return_to_montage(project, mix, 3 * (int64) Gst.SECOND);
+    var parser = new Json.Parser();
+    parser.load_from_file(project);
+    var root = parser.get_root().get_object();
+    bool mix_track = false, dialogue_muted = false, video_on = false, mix_clip = false;
+    foreach (var tn in root.get_array_member("tracks").get_elements()) {
+        var to = tn.get_object();
+        string id = to.get_string_member("id");
+        if (id == "wave-mix") mix_track = to.get_string_member("kind") == "audio" && !to.get_boolean_member("muted");
+        if (id == "audio-1") dialogue_muted = to.get_boolean_member("muted");
+        if (id == "video-1") video_on = !to.get_boolean_member("muted");
+    }
+    foreach (var cn in root.get_array_member("clips").get_elements()) {
+        var co = cn.get_object();
+        if (co.get_string_member("track") == "wave-mix") mix_clip = co.get_string_member("uri") == File.new_for_path(mix).get_uri() && co.get_int_member("end") == 3 * (int64) Gst.SECOND;
+    }
+    check(mix_track && dialogue_muted && video_on && mix_clip, "mix returned to the Montage project, original sound muted, video kept");
+    check(FileUtils.test(mix, FileTest.EXISTS) && Decoder.decode_sync(mix).source.frames > 0, "returned mix is a playable file");
+}
+
 int main(string[] args) {
     Gst.init(ref args);
     scratch = Environment.get_variable("WAVE_TEST_DIR") ?? Path.build_filename(Environment.get_tmp_dir(), "wave-test");
@@ -651,6 +697,7 @@ int main(string[] args) {
         test_metronome();
         test_surround();
         test_session_io();
+        test_montage();
         test_workflows();
         test_transcript();
         test_live();
