@@ -112,7 +112,10 @@ namespace Singularity.Apps.Wave {
                 foreach (var t in session.tracks) {
                     string fx = "";
                     foreach (var e in t.rack.effects) fx += (fx != "" ? ", " : "") + e.title;
-                    lines.add("%s    %s    %.1f dB    %s".printf(t.name, t.kind == TrackKind.BUS ? _("Bus") : t.kind == TrackKind.VIDEO ? _("Video") : ngettext("%d clip", "%d clips", t.clips.size).printf(t.clips.size), t.volume_db, fx));
+                    string kind = ngettext("%d clip", "%d clips", t.clips.size).printf(t.clips.size);
+                    if (t.kind == TrackKind.BUS) kind = _("Bus");
+                    else if (t.kind == TrackKind.VIDEO) kind = _("Video");
+                    lines.add("%s    %s    %.1f dB    %s".printf(t.name, kind, t.volume_db, fx));
                 }
                 lines.add("");
             }

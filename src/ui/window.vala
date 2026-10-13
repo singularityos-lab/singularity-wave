@@ -487,7 +487,8 @@ namespace Singularity.Apps.Wave {
                 if (wave.has_selection) {
                     transport.sel_label.label = _("Selection %s to %s, %s").printf(Timecode.format(wave.sel_a, rate), Timecode.format(wave.sel_b, rate), Timecode.format(wave.sel_b - wave.sel_a, rate));
                 } else {
-                    transport.sel_label.label = "%s, %d Hz, %s".printf(Timecode.format(doc.length, rate), doc.rate, doc.channels == 1 ? _("Mono") : doc.channels == 2 ? _("Stereo") : _("%d Channels").printf(doc.channels));
+                    string layout = channel_layout(doc.channels);
+                    transport.sel_label.label = "%s, %d Hz, %s".printf(Timecode.format(doc.length, rate), doc.rate, layout);
                 }
             } else if (session != null) {
                 transport.time_label.label = Timecode.clock(player.playing ? player.position : session_page.playhead_frame(), rate);
@@ -533,8 +534,17 @@ namespace Singularity.Apps.Wave {
             return session != null ? session.metadata : null;
         }
 
+        private static string channel_layout(int channels) {
+            if (channels == 1) return _("Mono");
+            if (channels == 2) return _("Stereo");
+            return _("%d Channels").printf(channels);
+        }
+
         public string format_summary() {
-            if (view_name == "waveform" && doc != null) return "%d Hz, %s, %s".printf(doc.rate, doc.channels == 1 ? _("Mono") : doc.channels == 2 ? _("Stereo") : _("%d Channels").printf(doc.channels), Timecode.format(doc.length, doc.rate));
+            if (view_name == "waveform" && doc != null) {
+                string layout = channel_layout(doc.channels);
+                return "%d Hz, %s, %s".printf(doc.rate, layout, Timecode.format(doc.length, doc.rate));
+            }
             if (session != null) return "%d Hz, %s".printf(session.rate, session.channels == 6 ? _("5.1 Surround") : _("Stereo"));
             return "";
         }
