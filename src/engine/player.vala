@@ -11,15 +11,22 @@ namespace Singularity.Apps.Wave {
             if (desc != null) return Gst.parse_bin_from_description(desc, true);
             var sink = Gst.ElementFactory.make("autoaudiosink", null);
             if (sink == null) throw new IOError.NOT_SUPPORTED(_("No audio output is available on this system"));
-            if (latency_samples > 0) {
-                ((Gst.Bin) sink).element_added.connect((el) => tune(el, latency_samples, rate));
-            }
+            if (latency_samples > 0) tune(sink, latency_samples, rate);
             return sink;
         }
 
         public void tune(Gst.Element el, int latency_samples, int rate) {
+            if (el is Gst.Bin) {
+                var bin = (Gst.Bin) el;
+                bin.element_added.connect((child) => tune(child, latency_samples, rate));
+                var it = bin.iterate_elements();
+                Value item;
+                while (it.next(out item) == Gst.IteratorResult.OK) tune((Gst.Element) item.get_object(), latency_samples, rate);
+                return;
+            }
             int64 us = (int64) latency_samples * 1000000 / rate;
             unowned ObjectClass klass = el.get_class();
+            if (klass.find_property("samplesperbuffer") != null) el.set("samplesperbuffer", latency_samples);
             if (klass.find_property("buffer-time") != null) el.set("buffer-time", us * 2);
             if (klass.find_property("latency-time") != null) el.set("latency-time", us);
             if (klass.find_property("stream-properties") != null) {
