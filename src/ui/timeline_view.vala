@@ -545,6 +545,9 @@ namespace Singularity.Apps.Wave {
         public SessionPage(WaveWindow win) {
             Object(orientation: Orientation.VERTICAL, spacing: 0);
             this.win = win;
+            notify["cursor"].connect(() => {
+                if (!win.player.playing) win.video_panel.sync(cursor);
+            });
             stack = new Stack();
             stack.vexpand = true;
             var timeline = new Box(Orientation.VERTICAL, 0);

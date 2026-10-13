@@ -533,7 +533,8 @@ namespace Singularity.Apps.Wave {
             int64 ms = seg.start_ms + (frame - seg.position) * 1000 / s.rate;
             if (last_seek >= 0 && (ms - last_seek).abs() < 40) return;
             last_seek = ms;
-            if (playbin != null) ((Gst.Element) playbin).seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT, ms * Gst.MSECOND);
+            var flags = Gst.SeekFlags.FLUSH | (win.player.playing ? Gst.SeekFlags.KEY_UNIT | Gst.SeekFlags.SNAP_NEAREST : Gst.SeekFlags.ACCURATE);
+            if (playbin != null) ((Gst.Element) playbin).seek_simple(Gst.Format.TIME, flags, ms * Gst.MSECOND);
             info.subtitle = "%s, %s".printf(Path.get_basename(File.new_for_uri(seg.uri).get_path() ?? seg.uri), Timecode.format(ms * s.rate / 1000, s.rate));
         }
 
