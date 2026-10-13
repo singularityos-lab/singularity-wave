@@ -603,6 +603,38 @@ void test_transcribe_command() throws Error {
     check(t != null && t.words.size == 6 && t.words[3].start > rate * 2, "two utterances transcribed with word times");
 }
 
+void test_metronome() throws Error {
+    var s = make_session();
+    foreach (var t in s.tracks) t.mute = true;
+    s.tempo = 120;
+    s.metronome = true;
+    int beat = s.rate / 2;
+    int frames = beat * 4;
+    var mix = new float[frames * 2];
+    s.mixer.include_metronome = true;
+    s.render(0, frames, mix);
+    int[] onsets = {};
+    float[] peaks = {};
+    for (int b = 0; b < 4; b++) {
+        int first = -1;
+        float peak = 0;
+        for (int f = b * beat; f < (b + 1) * beat; f++) {
+            float v = Math.fabsf(mix[f * 2]);
+            if (first < 0 && v > 0.01f) first = f;
+            peak = float.max(peak, v);
+        }
+        onsets += first;
+        peaks += peak;
+    }
+    bool on_beat = true;
+    for (int b = 0; b < 4; b++) on_beat = on_beat && onsets[b] >= b * beat && onsets[b] < b * beat + 8;
+    check(on_beat, "metronome clicks on every beat at 120 BPM (%d %d %d %d)".printf(onsets[0], onsets[1], onsets[2], onsets[3]));
+    check(peaks[0] > peaks[1] * 1.2f, "first beat of the bar is accented (%.2f against %.2f)".printf(peaks[0], peaks[1]));
+    s.mixer.include_metronome = false;
+    s.render(0, frames, mix);
+    check(WaveDsp.rms(mix, mix.length) < 1e-6, "metronome left out of renders and exports");
+}
+
 int main(string[] args) {
     Gst.init(ref args);
     scratch = Environment.get_variable("WAVE_TEST_DIR") ?? Path.build_filename(Environment.get_tmp_dir(), "wave-test");
@@ -616,6 +648,7 @@ int main(string[] args) {
         test_effects();
         test_restoration();
         test_session();
+        test_metronome();
         test_surround();
         test_session_io();
         test_workflows();
