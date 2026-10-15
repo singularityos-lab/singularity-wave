@@ -281,7 +281,7 @@ namespace Singularity.Apps.Wave {
                 break;
             case "quit":
                 var list = new Gee.ArrayList<Gtk.Window>();
-                foreach (var w in get_windows()) list.add(w);
+                foreach (var w in get_windows().copy()) list.add(w);
                 foreach (var w in list) w.close();
                 break;
             default:
