@@ -27,9 +27,11 @@ namespace Singularity.Apps.Wave {
             }
             if (eocd < 0) throw new ZipError.FORMAT("not a zip file");
             int count = u16(eocd + 10);
-            int pos = (int) u32(eocd + 16);
+            int64 dir = u32(eocd + 16);
+            if (dir > data.length) throw new ZipError.FORMAT("bad central directory");
+            int pos = (int) dir;
             for (int n = 0; n < count; n++) {
-                if (pos + 46 > data.length || u32(pos) != 0x02014b50) throw new ZipError.FORMAT("bad central directory");
+                if ((int64) pos + 46 > data.length || u32(pos) != 0x02014b50) throw new ZipError.FORMAT("bad central directory");
                 var e = new Entry();
                 e.method = u16(pos + 10);
                 e.compressed = u32(pos + 20);
@@ -38,6 +40,7 @@ namespace Singularity.Apps.Wave {
                 int extra_len = u16(pos + 30);
                 int comment_len = u16(pos + 32);
                 e.offset = u32(pos + 42);
+                if ((int64) pos + 46 + name_len > data.length) throw new ZipError.FORMAT("bad central directory");
                 var nb = new StringBuilder();
                 nb.append_len((string) ((uint8*) data + pos + 46), name_len);
                 entries[nb.str] = e;
@@ -72,18 +75,20 @@ namespace Singularity.Apps.Wave {
                 }
             }
             if (e == null) return null;
+            if ((int64) e.offset + 30 > data.length) throw new ZipError.FORMAT("bad local header");
             int p = (int) e.offset;
             if (u32(p) != 0x04034b50) throw new ZipError.FORMAT("bad local header");
-            int start = p + 30 + u16(p + 26) + u16(p + 28);
-            int end = start + (int) e.compressed;
-            if (end > data.length) throw new ZipError.FORMAT("truncated entry");
+            int64 first = (int64) p + 30 + u16(p + 26) + u16(p + 28);
+            int64 last = first + e.compressed;
+            if (last > data.length) throw new ZipError.FORMAT("truncated entry");
+            int start = (int) first, end = (int) last;
             uint8[] raw = data[start:end];
             if (e.method == 0) return raw;
             if (e.method != 8) throw new ZipError.UNSUPPORTED("compression method %d", e.method);
             var conv = new ZlibDecompressor(ZlibCompressorFormat.RAW);
             var input = new MemoryInputStream.from_data(raw);
             var stream = new ConverterInputStream(input, conv);
-            var out_buf = new ByteArray.sized(e.size > 0 ? e.size : 4096);
+            var out_buf = new ByteArray.sized(e.size > 0 ? uint32.min(e.size, 64 << 20) : 4096);
             uint8[] chunk = new uint8[65536];
             ssize_t n;
             while ((n = stream.read(chunk)) > 0) out_buf.append(chunk[0:n]);
