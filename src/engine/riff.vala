@@ -508,14 +508,17 @@ namespace Singularity.Apps.Wave {
         }
 
         private static uint32 le32(uint8[] b, int64 at) {
+            if (at < 0 || at + 4 > b.length) return 0;
             return (uint32) b[at] | ((uint32) b[at + 1] << 8) | ((uint32) b[at + 2] << 16) | ((uint32) b[at + 3] << 24);
         }
 
         private static uint16 le16(uint8[] b, int64 at) {
+            if (at < 0 || at + 2 > b.length) return 0;
             return (uint16) (b[at] | (b[at + 1] << 8));
         }
 
         private static uint32 be32(uint8[] b, int64 at) {
+            if (at < 0 || at + 4 > b.length) return 0;
             return ((uint32) b[at] << 24) | ((uint32) b[at + 1] << 16) | ((uint32) b[at + 2] << 8) | (uint32) b[at + 3];
         }
 
@@ -525,6 +528,7 @@ namespace Singularity.Apps.Wave {
 
         private static string cstr(uint8[] b, int64 at, int64 max) {
             var s = new StringBuilder();
+            if (at < 0) return "";
             for (int64 i = 0; i < max && at + i < b.length && b[at + i] != 0; i++) s.append_c((char) b[at + i]);
             return s.str.make_valid().strip();
         }
@@ -550,10 +554,17 @@ namespace Singularity.Apps.Wave {
             if (head.length < 12) return null;
             string magic = fourcc(head, 0);
             string kind = fourcc(head, 8);
-            if ((magic == "RIFF" || magic == "RF64") && kind == "WAVE") return parse_wav(path, head, magic == "RF64");
-            if (magic == "FORM" && (kind == "AIFF" || kind == "AIFC")) return parse_aiff(path, head, kind == "AIFC");
-            if (magic == "caff") return parse_caf(path, head);
-            return null;
+            PcmFile? p = null;
+            if ((magic == "RIFF" || magic == "RF64") && kind == "WAVE") p = parse_wav(path, head, magic == "RF64");
+            else if (magic == "FORM" && (kind == "AIFF" || kind == "AIFC")) p = parse_aiff(path, head, kind == "AIFC");
+            else if (magic == "caff") p = parse_caf(path, head);
+            return p != null && p.sane() ? p : null;
+        }
+
+        private bool sane() {
+            if (channels < 1 || channels > 64 || rate < 1 || rate > 1536000) return false;
+            if (is_float ? (bits != 32 && bits != 64) : (bits != 8 && bits != 16 && bits != 24 && bits != 32)) return false;
+            return data_offset > 0 && data_size >= 0;
         }
 
         private static uint8[] tail_bytes(string path, int64 offset) {
@@ -668,6 +679,7 @@ namespace Singularity.Apps.Wave {
                 string id = fourcc(b, pos);
                 int64 size = be32(b, pos + 4);
                 if (id == "COMM") {
+                    if (pos + 26 > b.length) return null;
                     p.channels = (int) ((b[pos + 8] << 8) | b[pos + 9]);
                     p.bits = (int) ((b[pos + 14] << 8) | b[pos + 15]);
                     p.rate = (int) Math.round(AiffWriter.read_extended(b, (int) pos + 16));
@@ -716,6 +728,7 @@ namespace Singularity.Apps.Wave {
                 int64 size = (int64) be64(b, pos + 4);
                 int64 body = pos + 12;
                 if (id == "desc") {
+                    if (body + 32 > b.length) return null;
                     uint64 r = be64(b, body);
                     double rate = *((double*) (&r));
                     p.rate = (int) Math.round(rate);
@@ -730,11 +743,11 @@ namespace Singularity.Apps.Wave {
                     p.data_size = size == -1 ? (int64) (FileUtils.test(path, FileTest.EXISTS) ? file_size(path) - p.data_offset : 0) : size - 4;
                     break;
                 } else if (id == "strg") {
-                    uint32 n = be32(b, body);
+                    uint32 n = uint32.min(be32(b, body), (uint32) int64.max(0, (b.length - body - 4) / 12));
                     int64 strings = body + 4 + n * 12;
                     for (uint32 i = 0; i < n; i++) names[be32(b, body + 4 + i * 12)] = cstr(b, strings + (int64) be64(b, body + 8 + i * 12), 256);
                 } else if (id == "mark") {
-                    uint32 n = be32(b, body + 4);
+                    uint32 n = uint32.min(be32(b, body + 4), (uint32) int64.max(0, (b.length - body - 8) / 28));
                     for (uint32 i = 0; i < n; i++) {
                         int64 m = body + 8 + i * 28;
                         uint64 fp = be64(b, m + 4);
@@ -743,6 +756,7 @@ namespace Singularity.Apps.Wave {
                         marks.add(new Marker("", (int64) frame));
                     }
                 }
+                if (size < 0 || size > b.length - body) break;
                 pos = body + size;
             }
             for (int i = 0; i < marks.size; i++) marks[i].name = names[mark_ids[i]] ?? _("Marker %d").printf(i + 1);

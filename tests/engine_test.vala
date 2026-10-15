@@ -681,6 +681,71 @@ void test_montage() throws Error {
     check(FileUtils.test(mix, FileTest.EXISTS) && Decoder.decode_sync(mix).source.frames > 0, "returned mix is a playable file");
 }
 
+uint8[] le_bytes(uint32 v) {
+    return { (uint8) v, (uint8) (v >> 8), (uint8) (v >> 16), (uint8) (v >> 24) };
+}
+
+uint8[] be_bytes(uint32 v) {
+    return { (uint8) (v >> 24), (uint8) (v >> 16), (uint8) (v >> 8), (uint8) v };
+}
+
+PcmFile? probe_bytes(uint8[] data) throws Error {
+    string path = Path.build_filename(scratch, "damaged.audio");
+    FileUtils.set_data(path, data);
+    return PcmFile.probe(path);
+}
+
+uint8[] wav_with(uint16 channels, uint16 bits) {
+    var b = new ByteArray();
+    b.append("RIFF".data);
+    b.append(le_bytes(36 + 64));
+    b.append("WAVEfmt ".data);
+    b.append(le_bytes(16));
+    b.append({ 1, 0, (uint8) channels, (uint8) (channels >> 8) });
+    b.append(le_bytes(44100));
+    b.append(le_bytes(44100 * 4));
+    b.append({ 4, 0, (uint8) bits, (uint8) (bits >> 8) });
+    b.append("data".data);
+    b.append(le_bytes(64));
+    b.append(new uint8[64]);
+    return b.data;
+}
+
+void test_damaged_audio() throws Error {
+    var good = probe_bytes(wav_with(2, 16));
+    check(good != null && good.channels == 2 && good.bits == 16, "valid wav probes");
+    check(probe_bytes(wav_with(2, 4)) == null, "4-bit wav rejected");
+    check(probe_bytes(wav_with(65535, 16)) == null, "65535 channels rejected");
+    var cut = wav_with(2, 16);
+    check(probe_bytes(cut[0:30]) == null, "truncated fmt rejected");
+    var caf = new ByteArray();
+    caf.append("caff".data);
+    caf.append({ 0, 1, 0, 0 });
+    caf.append("free".data);
+    caf.append({ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00 });
+    caf.append("strg".data);
+    caf.append({ 0, 0, 0, 0, 0, 0, 0, 8 });
+    caf.append(be_bytes((uint32) 0xFFFFFFF0U));
+    caf.append(new uint8[4]);
+    check(probe_bytes(caf.data) == null, "hostile caf terminates");
+    var aiff = new ByteArray();
+    aiff.append("FORM".data);
+    aiff.append(be_bytes(20));
+    aiff.append("AIFFCOMM".data);
+    aiff.append(be_bytes(18));
+    aiff.append({ 0, 2 });
+    check(probe_bytes(aiff.data) == null, "truncated aiff rejected");
+    var rand = new Rand.with_seed(7);
+    var base_wav = wav_with(2, 16);
+    for (int round = 0; round < 300; round++) {
+        var m = base_wav.copy();
+        int flips = rand.int_range(1, 6);
+        for (int i = 0; i < flips; i++) m[rand.int_range(0, 44)] = (uint8) rand.int_range(0, 256);
+        var p = probe_bytes(m);
+        if (p != null) check(p.frames >= 0 && p.channels >= 1 && p.channels <= 64, "mutated wav sane");
+    }
+}
+
 int main(string[] args) {
     Gst.init(ref args);
     scratch = Environment.get_variable("WAVE_TEST_DIR") ?? Path.build_filename(Environment.get_tmp_dir(), "wave-test");
@@ -702,6 +767,7 @@ int main(string[] args) {
         test_transcript();
         test_live();
         test_transcribe_command();
+        test_damaged_audio();
     } catch (Error e) {
         print("FAIL exception %s\n", e.message);
         failures++;
