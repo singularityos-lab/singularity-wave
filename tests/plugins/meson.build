@@ -42,3 +42,8 @@ test('wave-plugins', plugin_test,
   timeout: 120,
   is_parallel: false,
 )
+
+ttl_test = executable('wave-ttl-test', 'ttl_test.c',
+  dependencies: [plugin_c_dep],
+)
+test('wave-ttl', ttl_test)

@@ -17,7 +17,10 @@ typedef struct {
     char **piris;
     int np;
     int error;
+    int depth;
 } Parser;
+
+#define TTL_MAX_DEPTH 256
 
 TtlModel *ttl_model_new(void)
 {
@@ -287,18 +290,25 @@ static char *parse_term(Parser *p, int *literal)
         }
         return s;
     }
+    if ((c == '[' || c == '(') && p->depth >= TTL_MAX_DEPTH) {
+        p->error = 1;
+        return NULL;
+    }
     if (c == '[') {
         p->pos++;
+        p->depth++;
         char *b = new_blank(p);
         skip_ws(p);
         if (peek(p) != ']') parse_pol(p, b);
         skip_ws(p);
         if (peek(p) == ']') p->pos++;
         else p->error = 1;
+        p->depth--;
         return b;
     }
     if (c == '(') {
         p->pos++;
+        p->depth++;
         char *head = NULL;
         char *prev = NULL;
         for (;;) {
@@ -326,6 +336,7 @@ static char *parse_term(Parser *p, int *literal)
             add_triple(p->m, prev, WAVE_RDF "rest", WAVE_RDF "nil", 0);
             free(prev);
         }
+        p->depth--;
         return head ? head : strdup(WAVE_RDF "nil");
     }
     if (c == '_' && p->pos + 1 < p->len && p->src[p->pos + 1] == ':') {
