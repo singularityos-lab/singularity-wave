@@ -137,3 +137,13 @@ dsp_test = executable('wave-dsp-test',
 test('wave-dsp', dsp_test, timeout: 300)
 
 subdir('tests/plugins')
+
+wave_service_conf = configuration_data()
+wave_service_conf.set('bindir', get_option('prefix') / get_option('bindir'))
+configure_file(
+  input: 'data/dev.sinty.wave.service.in',
+  output: 'dev.sinty.wave.service',
+  configuration: wave_service_conf,
+  install: true,
+  install_dir: get_option('datadir') / 'dbus-1' / 'services'
+)

@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=dev.sinty.wave
+Exec=@bindir@/singularity-wave --gapplication-service
