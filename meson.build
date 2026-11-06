@@ -70,6 +70,7 @@ engine_sources = engine + plugin_vala
 
 ui = files(
   'src/ui/app.vala',
+  'src/ui/agent_intents.vala',
   'src/ui/window.vala',
   'src/ui/dialogs.vala',
   'src/ui/widgets.vala',

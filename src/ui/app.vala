@@ -108,6 +108,7 @@ namespace Singularity.Apps.Wave {
                 add_action(a);
             }
             build_menu();
+            WaveIntents.install(this);
             string[,] accels = {
                 { "app.quit", "<Control>q" }, { "app.open", "<Control>o" }, { "app.settings", "<Control>comma" }, { "app.new-session", "<Control>n" },
                 { "win.save", "<Control>s" }, { "win.save-as", "<Control><Shift>s" }, { "win.export", "<Control><Shift>e" }, { "win.close-document", "<Control>w" },
