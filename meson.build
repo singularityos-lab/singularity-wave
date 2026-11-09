@@ -103,7 +103,7 @@ executable('singularity-wave',
 
 engine_test = executable('wave-engine-test',
   engine_sources + files('tests/engine_test.vala'),
-  dependencies: engine_deps,
+  dependencies: engine_deps + [libsingularity_dep],
   vala_args: vapi_args + plugin_args,
 )
 test('wave-engine', engine_test, timeout: 900, is_parallel: false, env: ['WAVE_TEST_DIR=' + meson.current_build_dir() / 'engine-test', 'LC_ALL=C.UTF-8'])

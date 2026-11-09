@@ -366,18 +366,17 @@ namespace Singularity.Apps.Wave {
                 if (files.size == 0) return;
                 var t = LoudnessTarget.all()[target.index];
                 win.set_busy(true);
-                new Thread<void>("wave-match", () => {
+                Async.dispatch(win, Async.Qos.USER, (c) => {
                     var list = LoudnessMatch.analyze(files);
                     LoudnessMatch.apply(list, t.lufs, t.true_peak, out_dir, ExportFormat.WAV);
-                    Idle.add(() => {
+                    return () => {
                         win.set_busy(false);
                         int ok = 0;
                         foreach (var e in list) {
                             if (e.error == null) ok++;
                         }
                         win.toast(_("%d files matched to %.0f LUFS").printf(ok, t.lufs));
-                        return GLib.Source.REMOVE;
-                    });
+                    };
                 });
             }, 560);
             var g = new PreferencesGroup(_("Files"), _("Every file is measured and written again at the same loudness"));

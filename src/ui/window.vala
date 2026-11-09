@@ -625,16 +625,18 @@ namespace Singularity.Apps.Wave {
             set_busy(true);
             Session? s = null;
             Error? err = null;
-            SourceFunc cb = load_session.callback;
-            new Thread<void>("wave-load", () => {
-                try {
-                    s = loader();
-                } catch (Error e) {
-                    err = e;
-                }
-                Idle.add((owned) cb);
-            });
-            yield;
+            try {
+                yield Async.run<bool>((c) => {
+                    try {
+                        s = loader();
+                    } catch (Error e) {
+                        err = e;
+                    }
+                    return true;
+                }, Async.Qos.USER);
+            } catch (Error e) {
+                warning("%s", e.message);
+            }
             set_busy(false);
             if (err != null) {
                 show_error(_("Could Not Open"), err.message);
@@ -1378,12 +1380,14 @@ namespace Singularity.Apps.Wave {
                 } catch (Error e) {
                 }
             }
-            SourceFunc cb = analyze_loudness.callback;
-            new Thread<void>("wave-loudness", () => {
-                r = Loudness.measure_renderable(src);
-                Idle.add((owned) cb);
-            });
-            yield;
+            try {
+                yield Async.run<bool>((c) => {
+                    r = Loudness.measure_renderable(src);
+                    return true;
+                }, Async.Qos.USER);
+            } catch (Error e) {
+                warning("%s", e.message);
+            }
             loudness_panel.set_busy(false);
             loudness_panel.show_result(r);
         }
@@ -1403,12 +1407,14 @@ namespace Singularity.Apps.Wave {
                 session.mixer.prepare_clips();
             } catch (Error e) {
             }
-            SourceFunc cb = normalize_loudness.callback;
-            new Thread<void>("wave-loudness", () => {
-                r = Loudness.measure_renderable(session);
-                Idle.add((owned) cb);
-            });
-            yield;
+            try {
+                yield Async.run<bool>((c) => {
+                    r = Loudness.measure_renderable(session);
+                    return true;
+                }, Async.Qos.USER);
+            } catch (Error e) {
+                warning("%s", e.message);
+            }
             if (r != null && r.integrated.is_finite()) {
                 session.master.volume_db += lufs - r.integrated;
                 bool has_limiter = false;

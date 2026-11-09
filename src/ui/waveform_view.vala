@@ -779,12 +779,14 @@ namespace Singularity.Apps.Wave {
             int rows = int.min(height, 1024);
             double col_frames = view_fpp * w / cols;
             uint8[]? pixels = null;
-            SourceFunc cb = compute_spectral.callback;
-            new Thread<void>("wave-spectrum", () => {
-                pixels = SpectralRenderer.render(d, first, col_frames, cols, rows, fft, scale, rate);
-                Idle.add((owned) cb);
-            });
-            yield;
+            try {
+                yield Async.run<bool>((c) => {
+                    pixels = SpectralRenderer.render(d, first, col_frames, cols, rows, fft, scale, rate);
+                    return true;
+                }, Async.Qos.USER);
+            } catch (Error e) {
+                warning("%s", e.message);
+            }
             spec_busy = false;
             if (pixels != null) {
                 var bytes = new Bytes.take((owned) pixels);

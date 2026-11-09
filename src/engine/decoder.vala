@@ -26,21 +26,22 @@ namespace Singularity.Apps.Wave {
         public async DecodedMedia decode(string path) throws Error {
             DecodedMedia? result = null;
             Error? failure = null;
-            SourceFunc callback = decode.callback;
-            new Thread<void>("wave-decode", () => {
-                try {
-                    result = decode_sync(path, cancellable, (f) => {
-                        Idle.add(() => {
-                            progress(f);
-                            return Source.REMOVE;
+            try {
+                yield Async.run<bool>((c) => {
+                    try {
+                        result = decode_sync(path, cancellable, (f) => {
+                            Async.post(this, () => {
+                                progress(f);
+                            });
                         });
-                    });
-                } catch (Error e) {
-                    failure = e;
-                }
-                Idle.add((owned) callback);
-            });
-            yield;
+                    } catch (Error e) {
+                        failure = e;
+                    }
+                    return true;
+                }, Async.Qos.INTERACTIVE);
+            } catch (Error e) {
+                warning("%s", e.message);
+            }
             if (failure != null) throw failure;
             return result;
         }

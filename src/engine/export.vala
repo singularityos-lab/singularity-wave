@@ -115,21 +115,22 @@ namespace Singularity.Apps.Wave {
 
         public async void export(Renderable src, string path, ExportOptions options) throws Error {
             Error? failure = null;
-            SourceFunc callback = export.callback;
-            new Thread<void>("wave-export", () => {
-                try {
-                    export_sync(src, path, options, cancellable, (f) => {
-                        Idle.add(() => {
-                            progress(f);
-                            return Source.REMOVE;
+            try {
+                yield Async.run<bool>((c) => {
+                    try {
+                        export_sync(src, path, options, cancellable, (f) => {
+                            Async.post(this, () => {
+                                progress(f);
+                            });
                         });
-                    });
-                } catch (Error e) {
-                    failure = e;
-                }
-                Idle.add((owned) callback);
-            });
-            yield;
+                    } catch (Error e) {
+                        failure = e;
+                    }
+                    return true;
+                }, Async.Qos.USER);
+            } catch (Error e) {
+                warning("%s", e.message);
+            }
             if (failure != null) throw failure;
         }
 

@@ -68,12 +68,14 @@ namespace Singularity.Apps.Wave {
 
         public async int run() {
             int result = 0;
-            SourceFunc cb = run.callback;
-            new Thread<void>("wave-batch", () => {
-                result = run_sync();
-                Idle.add((owned) cb);
-            });
-            yield;
+            try {
+                yield Async.run<bool>((c) => {
+                    result = run_sync();
+                    return true;
+                }, Async.Qos.USER);
+            } catch (Error e) {
+                warning("%s", e.message);
+            }
             return result;
         }
 
