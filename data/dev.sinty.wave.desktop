@@ -7,6 +7,7 @@ Icon=dev.sinty.wave
 Terminal=false
 Type=Application
 Categories=AudioVideo;Audio;AudioVideoEditing;Recorder;
+X-Sinty-FormFactors=desktop;tablet;phone
 MimeType=application/x-wave-session;audio/x-wav;audio/wav;audio/flac;audio/x-flac;audio/mpeg;audio/ogg;audio/x-vorbis+ogg;audio/x-opus+ogg;audio/aac;audio/mp4;audio/x-m4a;audio/x-aiff;audio/x-caf;application/x-cue;
 Keywords=audio;sound;wave;waveform;podcast;record;mix;multitrack;noise;restore;loudness;spectral;
 StartupWMClass=dev.sinty.wave
