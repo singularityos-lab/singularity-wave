@@ -517,6 +517,14 @@ namespace Singularity.Apps.Wave {
             get { return history_index < history.size - 1; }
         }
 
+        public void restore_history(string[] states, string[] labels, int index) {
+            history.clear();
+            history_labels.clear();
+            foreach (string s in states) history.add(s);
+            foreach (string l in labels) history_labels.add(l);
+            history_index = index.clamp(-1, history.size - 1);
+        }
+
         public void restore(int index) {
             if (index < 0 || index >= history.size) return;
             SessionFile.restore_into(this, history[index]);

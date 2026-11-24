@@ -2,12 +2,13 @@ using Gtk;
 
 namespace Singularity.Apps.Wave {
 
-    public class WaveApp : Singularity.Application {
+    public class WaveApp : Singularity.Application, Singularity.Migration.Migratable {
         public GLib.Settings? settings;
         public InputDevices? devices = null;
         private string? new_kind = null;
         private string? montage_path = null;
         private string[] batch_args = {};
+        private Gee.HashMap<string, PcmSource> carried = new Gee.HashMap<string, PcmSource>();
 
         public WaveApp() {
             Object(application_id: "dev.sinty.wave", flags: ApplicationFlags.HANDLES_OPEN);
@@ -301,6 +302,56 @@ namespace Singularity.Apps.Wave {
                 montage_path = null;
             }
             w.present();
+        }
+
+        public void prepare_move() throws Singularity.Migration.MigrationError {
+            carried.clear();
+            foreach (var w in get_windows()) {
+                var ww = w as WaveWindow;
+                if (ww != null) ww.prepare_move();
+            }
+        }
+
+        public void carry(PcmSource s) {
+            carried[s.path] = s;
+        }
+
+        public PcmSource reopen_source(string path, int rate, int channels, bool temporary) throws Error {
+            var s = carried[path];
+            if (s != null && s.rate == rate && s.channels == channels) return s;
+            return PcmSource.open_raw(path, rate, channels, temporary);
+        }
+
+        public Variant save_model() {
+            return new VariantDict().end();
+        }
+
+        public async void restore_model(Variant model) throws Error {
+        }
+
+        public string window_kind(Gtk.Window w) {
+            return (w is WaveWindow) ? "wave" : "";
+        }
+
+        public Variant save_window(Gtk.Window w) {
+            return ((WaveWindow) w).save_migration();
+        }
+
+        public string[] files() {
+            string[] all = {};
+            foreach (var w in get_windows()) {
+                var ww = w as WaveWindow;
+                if (ww == null) continue;
+                foreach (var f in ww.migration_files()) all += f;
+            }
+            return all;
+        }
+
+        public async Gtk.Window? rebuild_window(string kind, Variant data) throws Error {
+            if (kind != "wave") return null;
+            var w = new WaveWindow(this);
+            yield w.restore_migration(data);
+            return w;
         }
 
         protected override void open(File[] files, string hint) {

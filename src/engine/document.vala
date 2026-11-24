@@ -440,6 +440,88 @@ namespace Singularity.Apps.Wave {
             }
         }
 
+        public Variant save_edits(Gee.ArrayList<PcmSource> sources) {
+            var snaps = new VariantBuilder(new VariantType("a(sa(ixx)as)"));
+            foreach (var s in history) {
+                string[] ms = {};
+                foreach (var m in s.markers) ms += json_text(m.to_json());
+                snaps.add("(s@a(ixx)@as)", s.label, save_segments(s.segments, sources), new Variant.strv(ms));
+            }
+            return new Variant("(s@a(ixx)@a(sa(ixx)as)ibbs)", json_text(to_json()), save_segments(segments, sources), snaps.end(),
+                history_index, modified, has_video, transcript_json);
+        }
+
+        public static Document load_edits(Variant state, Gee.List<PcmSource> sources) throws Error {
+            var o = json_object(state.get_child_value(0).get_string());
+            var d = new Document((int) o.get_int_member_with_default("rate", 48000), (int) o.get_int_member_with_default("channels", 2));
+            d.title = o.get_string_member_with_default("title", "");
+            d.metadata = Metadata.from_json(o.has_member("metadata") ? o.get_object_member("metadata") : null);
+            if (o.has_member("markers")) {
+                foreach (var n in o.get_array_member("markers").get_elements()) d.markers.add(Marker.from_json(n.get_object()));
+            }
+            d.rack.load_json(o.has_member("rack") ? o.get_object_member("rack") : null);
+            d.segments = load_segments(state.get_child_value(1), sources);
+            d.recount();
+            var it = state.get_child_value(2).iterator();
+            string label;
+            Variant segs, marks;
+            while (it.next("(s@a(ixx)@as)", out label, out segs, out marks)) {
+                var snap = new Snapshot();
+                snap.label = label;
+                snap.segments = load_segments(segs, sources);
+                Marker[] ms = {};
+                foreach (string m in marks.get_strv()) ms += Marker.from_json(json_object(m));
+                snap.markers = ms;
+                snap.time = get_real_time();
+                d.history.add(snap);
+            }
+            d.history_index = state.get_child_value(3).get_int32().clamp(-1, d.history.size - 1);
+            d.modified = state.get_child_value(4).get_boolean();
+            d.has_video = state.get_child_value(5).get_boolean();
+            d.transcript_json = state.get_child_value(6).get_string();
+            return d;
+        }
+
+        private static Variant save_segments(Segment[] list, Gee.ArrayList<PcmSource> sources) {
+            var b = new VariantBuilder(new VariantType("a(ixx)"));
+            foreach (var s in list) {
+                int index = -1;
+                if (s.source != null) {
+                    index = sources.index_of(s.source);
+                    if (index < 0) {
+                        sources.add(s.source);
+                        index = sources.size - 1;
+                    }
+                }
+                b.add("(ixx)", index, s.offset, s.length);
+            }
+            return b.end();
+        }
+
+        private static Segment[] load_segments(Variant list, Gee.List<PcmSource> sources) throws Error {
+            Segment[] result = {};
+            var it = list.iterator();
+            int index;
+            int64 offset, length;
+            while (it.next("(ixx)", out index, out offset, out length)) {
+                if (index >= sources.size) throw new IOError.INVALID_DATA(_("The audio of this recording is missing"));
+                result += new Segment(index >= 0 ? sources[index] : null, offset, length);
+            }
+            return result;
+        }
+
+        private static string json_text(Json.Object o) {
+            var n = new Json.Node(Json.NodeType.OBJECT);
+            n.set_object(o);
+            return Json.to_string(n, false);
+        }
+
+        private static Json.Object json_object(string text) throws Error {
+            var p = new Json.Parser();
+            p.load_from_data(text);
+            return p.get_root().get_object();
+        }
+
         public Json.Object to_json() {
             var o = new Json.Object();
             o.set_string_member("title", title);

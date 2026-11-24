@@ -166,6 +166,25 @@ namespace Singularity.Apps.Wave {
 
         private bool fit_mode = false;
 
+        public bool fitted {
+            get { return fit_mode; }
+        }
+
+        public void set_view(double new_fpp, int64 new_scroll, bool fit) {
+            pending_fit = false;
+            if (fit) {
+                fit_mode = true;
+                zoom_fit();
+                return;
+            }
+            fit_mode = false;
+            fpp = new_fpp;
+            scroll = new_scroll;
+            spec_key = "";
+            view_changed();
+            queue_draw();
+        }
+
         public void zoom_fit() {
             if (doc == null || get_width() <= 0) return;
             fit_mode = true;

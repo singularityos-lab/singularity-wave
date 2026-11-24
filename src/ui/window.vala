@@ -89,6 +89,184 @@ namespace Singularity.Apps.Wave {
             return doc == null && session == null;
         }
 
+        public void prepare_move() throws Singularity.Migration.MigrationError {
+            if (recorder.recording) throw new Singularity.Migration.MigrationError.UNSUPPORTED(_("Stop recording before moving Wave"));
+        }
+
+        private static string portable(string path) {
+            return Singularity.Migration.portable_path(File.new_for_path(path));
+        }
+
+        private static string local(string portable) {
+            return Singularity.Migration.local_file(portable).get_path() ?? portable;
+        }
+
+        public Variant save_migration() {
+            var d = new VariantDict();
+            var sources = new Gee.ArrayList<PcmSource>();
+            d.insert_value("view", new Variant.string(view_name));
+            d.insert_value("panel", new Variant("(sb)", current_panel(), get_panel_visible()));
+            if (session != null) {
+                string current = SessionFile.to_string(session);
+                var pool = SessionFile.pool(session);
+                var media = new VariantBuilder(new VariantType("a(ssi)"));
+                foreach (var e in pool.by_id.entries) {
+                    int index = sources.index_of(e.value);
+                    if (index < 0) {
+                        sources.add(e.value);
+                        index = sources.size - 1;
+                    }
+                    string p = pool.paths[e.key] ?? "";
+                    media.add("(ssi)", e.key, p != "" ? portable(p) : "", index);
+                }
+                d.insert_value("session", new Variant("(iis@a(ssi)@as@asisb)", session.rate, session.channels, current, media.end(),
+                    new Variant.strv(session.history.to_array()), new Variant.strv(session.history_labels.to_array()), session.history_index,
+                    session.path != "" ? portable(session.path) : "", session.modified));
+                int64 a, b;
+                session_page.time_selection(out a, out b);
+                int track = session_page.selected_track != null ? session.tracks.index_of(session_page.selected_track) : -1;
+                d.insert_value("timeline", new Variant("(dxxxx@(ii)@(ii))", session_page.fpp, session_page.scroll, session_page.cursor, a, b,
+                    clip_index(session_page.selected_clip, track), clip_index(editing_clip, -1)));
+            }
+            if (doc != null) {
+                d.insert_value("document", doc.save_edits(sources));
+                d.insert_value("path", new Variant.string(doc.path != "" ? portable(doc.path) : ""));
+                d.insert_value("wave", new Variant("(dxbxxxii)", wave.fpp, wave.scroll, wave.fitted, wave.sel_a, wave.sel_b, wave.cursor, (int) wave.mode, (int) wave.tool));
+            }
+            var table = new VariantBuilder(new VariantType("a(siib)"));
+            foreach (var s in sources) {
+                app.carry(s);
+                table.add("(siib)", portable(s.path), s.rate, s.channels, s.temporary);
+            }
+            d.insert_value("sources", table.end());
+            return d.end();
+        }
+
+        private Variant clip_index(Clip? c, int track) {
+            if (c != null && session != null) {
+                for (int t = 0; t < session.tracks.size; t++) {
+                    int i = session.tracks[t].clips.index_of(c);
+                    if (i >= 0) return new Variant("(ii)", t, i);
+                }
+            }
+            return new Variant("(ii)", track, -1);
+        }
+
+        private Clip? clip_at(Variant index) {
+            int t, i;
+            index.get("(ii)", out t, out i);
+            if (session == null || t < 0 || t >= session.tracks.size || i < 0 || i >= session.tracks[t].clips.size) return null;
+            return session.tracks[t].clips[i];
+        }
+
+        public string[] migration_files() {
+            string[] files = {};
+            if (doc != null && doc.path != "") files += portable(doc.path);
+            if (session != null) {
+                if (session.path != "") files += portable(session.path);
+                var pool = SessionFile.pool(session);
+                foreach (var p in pool.paths.values) {
+                    if (p != "" && FileUtils.test(p, FileTest.EXISTS)) files += portable(p);
+                }
+                foreach (var s in pool.by_id.values) files += portable(s.path);
+            }
+            if (doc != null) {
+                var seen = new Gee.HashSet<string>();
+                foreach (var snap in doc.history) {
+                    foreach (var seg in snap.segments) {
+                        if (seg.source != null && seen.add(seg.source.path)) files += portable(seg.source.path);
+                    }
+                }
+                foreach (var seg in doc.get_segments()) {
+                    if (seg.source != null && seen.add(seg.source.path)) files += portable(seg.source.path);
+                }
+            }
+            return files;
+        }
+
+        public async void restore_migration(Variant data) throws Error {
+            var d = new VariantDict(data);
+            var sources = new Gee.ArrayList<PcmSource>();
+            var table = d.lookup_value("sources", new VariantType("a(siib)"));
+            if (table != null) {
+                var it = table.iterator();
+                string path;
+                int rate, channels;
+                bool temporary;
+                while (it.next("(siib)", out path, out rate, out channels, out temporary)) sources.add(app.reopen_source(local(path), rate, channels, temporary));
+            }
+            var state = d.lookup_value("session", new VariantType("(iissa(ssi)asasisb)"));
+            if (state != null) {
+                int rate, channels, index;
+                string current, path;
+                Variant media, states, labels;
+                bool modified;
+                state.get("(iis@a(ssi)@as@asisb)", out rate, out channels, out current, out media, out states, out labels, out index, out path, out modified);
+                var s = new Session(rate, channels);
+                var pool = SessionFile.pool(s);
+                var it = media.iterator();
+                string id, file;
+                int source;
+                while (it.next("(ssi)", out id, out file, out source)) {
+                    if (source < 0 || source >= sources.size) continue;
+                    pool.by_id[id] = sources[source];
+                    pool.paths[id] = file != "" ? local(file) : "";
+                }
+                SessionFile.restore_into(s, current);
+                s.restore_history(states.get_strv(), labels.get_strv(), index);
+                s.path = path != "" ? local(path) : "";
+                bind_session(s);
+                s.modified = modified;
+            }
+            var edits = d.lookup_value("document", new VariantType("(sa(ixx)a(sa(ixx)as)ibbs)"));
+            if (edits != null) {
+                var restored = Document.load_edits(edits, sources);
+                string path = (d.lookup_value("path", VariantType.STRING) ?? new Variant.string("")).get_string();
+                restored.path = path != "" ? local(path) : "";
+                set_document(restored);
+            }
+            var timeline = d.lookup_value("timeline", new VariantType("(dxxxx(ii)(ii))"));
+            if (timeline != null) editing_clip = doc != null ? clip_at(timeline.get_child_value(6)) : null;
+            string wanted = (d.lookup_value("view", VariantType.STRING) ?? new Variant.string("welcome")).get_string();
+            if (wanted != "welcome" && wanted != view_name) show_view(wanted);
+            var panel = d.lookup_value("panel", new VariantType("(sb)"));
+            if (panel != null && view_name != "welcome") {
+                string id;
+                bool visible;
+                panel.get("(sb)", out id, out visible);
+                if (id != "") show_panel(id);
+                set_panel_visible(visible);
+            }
+            Idle.add(restore_migration.callback);
+            yield;
+            var view = d.lookup_value("wave", new VariantType("(dxbxxxii)"));
+            if (view != null && doc != null) {
+                double fpp;
+                int64 scroll, a, b, cursor;
+                bool fit;
+                int mode, tool;
+                view.get("(dxbxxxii)", out fpp, out scroll, out fit, out a, out b, out cursor, out mode, out tool);
+                wave.set_view(fpp, scroll, fit);
+                wave.set_selection(a, b);
+                wave.cursor = cursor;
+                wave.mode = (ViewMode) mode;
+                wave.tool = (SpectralTool) tool;
+                wave.queue_draw();
+            }
+            if (timeline != null && session != null) {
+                session_page.fpp = timeline.get_child_value(0).get_double();
+                session_page.scroll = timeline.get_child_value(1).get_int64();
+                session_page.cursor = timeline.get_child_value(2).get_int64();
+                session_page.set_time_selection(timeline.get_child_value(3).get_int64(), timeline.get_child_value(4).get_int64());
+                int t, i;
+                timeline.get_child_value(5).get("(ii)", out t, out i);
+                if (t >= 0 && t < session.tracks.size) session_page.select_track(session.tracks[t]);
+                session_page.select_clip(clip_at(timeline.get_child_value(5)));
+            }
+            update_title();
+            update_status();
+        }
+
         private Widget build_welcome() {
             var wp = new WelcomePage();
             wp.app_icon_name = "dev.sinty.wave";
