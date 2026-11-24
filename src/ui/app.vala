@@ -2,7 +2,7 @@ using Gtk;
 
 namespace Singularity.Apps.Wave {
 
-    public class WaveApp : Singularity.Application, Singularity.Migration.Migratable {
+    public class WaveApp : Singularity.Application, Singularity.Migration.Migratable, Singularity.Startup.Bootable {
         public GLib.Settings? settings;
         public InputDevices? devices = null;
         private string? new_kind = null;
@@ -291,7 +291,30 @@ namespace Singularity.Apps.Wave {
             }
         }
 
-        protected override void activate() {
+        public Singularity.Startup.Plan build_plan(Singularity.Startup.Request request) {
+            var plan = new Singularity.Startup.Plan();
+            plan.version = "wave-1";
+            if (request.kind == Singularity.Startup.RequestKind.SERVICE) {
+                plan.main("ready", Singularity.Startup.Category.PREPARE, (c) => {})
+                    .reaches(Singularity.Startup.Milestone.SHELL_READY)
+                    .reaches(Singularity.Startup.Milestone.CONTENT_READY)
+                    .reaches(Singularity.Startup.Milestone.INTERACTIVE);
+                return plan;
+            }
+            plan.main("window", Singularity.Startup.Category.SHELL, (c) => {
+                c.window = request.kind == Singularity.Startup.RequestKind.OPEN ? open_files(request.files()) : show_window();
+            }).reaches(Singularity.Startup.Milestone.SHELL_READY)
+              .reaches(Singularity.Startup.Milestone.CONTENT_READY)
+              .reaches(Singularity.Startup.Milestone.INTERACTIVE);
+            return plan;
+        }
+
+        public void handle_request(Singularity.Startup.Request request) {
+            if (request.kind == Singularity.Startup.RequestKind.OPEN) open_files(request.files());
+            else show_window();
+        }
+
+        private WaveWindow show_window() {
             var w = target_window();
             if (new_kind != null) {
                 w.new_session(new_kind);
@@ -302,6 +325,7 @@ namespace Singularity.Apps.Wave {
                 montage_path = null;
             }
             w.present();
+            return w;
         }
 
         public void prepare_move() throws Singularity.Migration.MigrationError {
@@ -354,10 +378,11 @@ namespace Singularity.Apps.Wave {
             return w;
         }
 
-        protected override void open(File[] files, string hint) {
+        private WaveWindow open_files(File[] files) {
             var w = empty_window();
             foreach (var f in files) w.open_file(f);
             w.present();
+            return w;
         }
 
         protected override void shutdown() {
